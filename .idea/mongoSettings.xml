@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MongoConfiguration">
+    <option name="serverConfigurations">
+      <set>
+        <ServerConfiguration>
+          <option name="authenticationMechanism" value="SCRAM-SHA-1" />
+          <option name="label" value="music" />
+          <option name="password" value="byteburst" />
+          <option name="serverUrls">
+            <list>
+              <option value="freaks.dev:27017" />
+            </list>
+          </option>
+          <option name="shellWorkingDir" value="null" />
+          <option name="sshTunnelingConfiguration">
+            <SshTunnelingConfiguration />
+          </option>
+          <option name="username" value="root" />
+        </ServerConfiguration>
+      </set>
+    </option>
+  </component>
+</project>
