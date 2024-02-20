@@ -7,8 +7,11 @@ import static com.mongodb.client.model.Filters.eq;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Main {
+
     public static void main(String[] args) throws IOException {
         MongoClientURI uri = new MongoClientURI("mongodb://root:byteburst@freaks.dev/?authSource=admin");
         MongoClient mongoClient = new MongoClient(uri);
@@ -18,10 +21,12 @@ public class Main {
         MongoCollection<org.bson.Document> playlists = db.getCollection("playlists");
         BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
 
-        do {
+        /*do {
             registerUser(users, userInput);
             System.out.print("Do you want to register another user? (1=Yes, 2=No): ");
         } while (Integer.parseInt(userInput.readLine()) != 2);
+
+         */
 
         System.out.println("Enter the username of the user whose playlist you want to view: ");
         String username = userInput.readLine();
@@ -29,23 +34,27 @@ public class Main {
             System.out.println("Invalid username.");
             return;
         }
-
         System.out.println("Enter the password of the user whose playlist you want to view: ");
         String password = userInput.readLine();
         if (!checkPassword(username, password, users)) {
             System.out.println("Invalid password.");
             return;
         }
-
-        System.out.println("Playlist for " + username + ":");
+        System.out.println("Original playlist for " + username + ":");
         showPlaylist(username, playlists);
 
-        System.out.println("Enter the index of the song you want to add to the playlist: ");
-        int index = showSongs(songs, userInput);
-        addSongToPlaylist(index, username, songs, playlists);
-
-        System.out.println("Playlist for " + username + ":");
-        showPlaylist(username, playlists);
+        System.out.println("Songs:");
+        FindIterable<Document> results = songs.find();
+        int i = 0;
+        for (Document doc : results) {
+            System.out.println((i++) + ". " + doc.getString("title") + " - " + doc.getString("artist"));
+        }
+        int request = 1;
+        while (request!= 2) {
+            addSong(username, playlists, songs, userInput);
+            System.out.print("Do you want to add another song? (1=Yes, 2=No): ");
+            request = Integer.parseInt(userInput.readLine());
+        }
 
         mongoClient.close();
     }
@@ -92,8 +101,30 @@ public class Main {
         return Integer.parseInt(userInput.readLine());
     }
 
-    public static void addSongToPlaylist(int index, String username, MongoCollection<org.bson.Document> songs, MongoCollection<org.bson.Document> playlists) {
-        Document song = songs.find().skip(index).first();
-        playlists.insertOne(new Document("username", username).append("song", song));
+    public static void addSong(String username, MongoCollection<org.bson.Document> playlists, MongoCollection<org.bson.Document> songs, BufferedReader userInput) throws IOException {
+        int songIndex = showSongs(songs, userInput); // Get the song index from user input
+        Document song = songs.find().skip(songIndex - 1).limit(1).first(); // Retrieve the song using the index
+
+        Document playlist = playlists.find(eq("username", username)).first();
+        if (playlist == null) {
+            ArrayList<Document> songList = new ArrayList<>();
+            songList.add(song);
+            playlist = new Document("username", username).append("songs", songList);
+            playlists.insertOne(playlist);
+        } else {
+            // Retrieve the existing songs array from the playlist
+            ArrayList<Document> songList = (ArrayList<Document>) playlist.get("songs");
+
+            // Check if the song is already in the playlist
+            if (!songList.contains(song)) {
+                songList.add(song);
+                playlist.put("songs", songList);
+                playlists.replaceOne(eq("username", username), playlist);
+                System.out.println("Added song at index " + songIndex + " to " + username + "'s playlist.");
+            } else {
+                System.out.println("Song already exists in the playlist.");
+            }
+        }
     }
+
 }
